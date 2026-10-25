@@ -77,7 +77,7 @@ private data class TerminalTab(
     val label: String,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ContainerTerminalScreen(
     containerName: String,
