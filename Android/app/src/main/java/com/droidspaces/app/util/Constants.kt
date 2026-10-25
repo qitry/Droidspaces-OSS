@@ -47,7 +47,6 @@ object Constants {
     const val KEY_TERMINAL_FONT_FILE = "terminal_font_file"
     const val KEY_TERMINAL_CONFIRM_CLOSE = "terminal_confirm_close"
     const val KEY_TERMINAL_TAP_KEYBOARD = "terminal_tap_keyboard"
-    const val KEY_TERMINAL_KEYBOARD_LEFT = "terminal_keyboard_button_left"
     const val KEY_APP_LOCALE = "app_locale"
     const val KEY_BACKEND_MODE = "backend_mode"
     const val KEY_SELINUX_STATUS = "selinux_status"

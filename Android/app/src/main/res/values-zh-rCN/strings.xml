@@ -527,9 +527,7 @@
     <string name="terminal_close_tab_title">关闭会话？</string>
     <string name="terminal_close_tab_message">将关闭此标签页中运行的 Shell。</string>
     <string name="terminal_tap_keyboard">轻触即可打开键盘</string>
-    <string name="terminal_tap_keyboard_description">轻触终端可在非 TUI 鼠标模式下打开键盘。编辑器和 TUI 中可随时使用屏幕上的键盘按钮</string>
-    <string name="terminal_keyboard_left">左侧的键盘按键</string>
-    <string name="terminal_keyboard_left_description">将键盘按钮移动到左下角，以便左撇子使用</string>
+    <string name="terminal_tap_keyboard_description">轻触终端可在非 TUI 鼠标模式下打开键盘。新建会话按钮旁的键盘按钮始终可用，适合编辑器和 TUI</string>
     <string name="terminal_toggle_keyboard">切换键盘</string>
     <string name="updates_section">更新</string>
     <string name="check_app_updates">检查应用更新</string>

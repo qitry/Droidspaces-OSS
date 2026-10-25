@@ -180,20 +180,12 @@ class PreferencesManager private constructor(context: Context) {
         }
 
     // On by default so nothing changes on upgrade. Off hands a tap to whatever
-    // runs in the terminal, which is what an editor wants, and the keyboard
-    // comes from the button on the terminal instead.
+    // runs in the terminal, which is what an editor wants; the top bar keyboard
+    // button is always there either way.
     var terminalTapKeyboard: Boolean
         get() = prefs.getBoolean(KEY_TERMINAL_TAP_KEYBOARD, true)
         set(value) {
             prefs.edit().putBoolean(KEY_TERMINAL_TAP_KEYBOARD, value).apply()
-        }
-
-    // Which bottom corner that button sits in. False is the right, for the
-    // right-handed majority.
-    var terminalKeyboardLeft: Boolean
-        get() = prefs.getBoolean(KEY_TERMINAL_KEYBOARD_LEFT, false)
-        set(value) {
-            prefs.edit().putBoolean(KEY_TERMINAL_KEYBOARD_LEFT, value).apply()
         }
 
     var isDaemonModeEnabled: Boolean
@@ -481,7 +473,6 @@ class PreferencesManager private constructor(context: Context) {
         private const val KEY_TERMINAL_FONT_FILE = Constants.KEY_TERMINAL_FONT_FILE
         private const val KEY_TERMINAL_CONFIRM_CLOSE = Constants.KEY_TERMINAL_CONFIRM_CLOSE
         private const val KEY_TERMINAL_TAP_KEYBOARD = Constants.KEY_TERMINAL_TAP_KEYBOARD
-        private const val KEY_TERMINAL_KEYBOARD_LEFT = Constants.KEY_TERMINAL_KEYBOARD_LEFT
         const val KEY_THEME_PALETTE = Constants.KEY_THEME_PALETTE
         const val KEY_DAEMON_MODE_ENABLED = Constants.KEY_DAEMON_MODE_ENABLED
         const val KEY_SYMLINK_ENABLED = Constants.KEY_SYMLINK_ENABLED

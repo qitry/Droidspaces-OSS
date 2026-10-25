@@ -510,8 +510,6 @@
     <string name="not_now">Teď ne</string>
     <string name="terminal_tap_keyboard">Otevírat klávesnici klepnutím</string>
     <string name="terminal_tap_keyboard_description">Klepnutím na terminál se otevře klávesnice. Při práci v editorech tuto volbu vypněte, aby klepnutí pouze přesunulo kurzor, a místo toho používejte tlačítko na obrazovce</string>
-    <string name="terminal_keyboard_left">Tlačítko klávesnice vlevo</string>
-    <string name="terminal_keyboard_left_description">Přesune tlačítko klávesnice do levého dolního rohu pro ovládání levou rukou</string>
     <string name="terminal_toggle_keyboard">Zobrazit nebo skrýt klávesnici</string>
     <string name="experimental_section">Experimentální</string>
     <string name="treat_as_64bit">Použít 64bitový backend</string>

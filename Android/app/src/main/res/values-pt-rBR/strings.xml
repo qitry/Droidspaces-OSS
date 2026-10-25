@@ -285,8 +285,6 @@
     <string name="auto_boot_priority_hint">Arraste para reordenar. Os containers iniciam de cima para baixo - coloque um gateway (ex: OpenWRT) primeiro para que ele inicialize antes dos containers que roteiam através dele.</string>
     <string name="auto_boot_priority_empty">Nenhum container tem Iniciar no Boot habilitado.</string>
     <string name="terminal_tap_keyboard_description">Clicar no terminal abre o teclado. Desligue isso nos editores, para que um clique apenas mova o cursor, e use o teclado na tela no lugar.</string>
-    <string name="terminal_keyboard_left">Botão do Teclado na esquerda</string>
-    <string name="terminal_keyboard_left_description">Mova o botão do teclado para o canto inferior esquerdo, para uso com a mão esquerda</string>
     <string name="terminal_toggle_keyboard">Toggle Teclado</string>
     <string name="terminal_close_tab_title">Encerrar sessão?</string>
     <string name="terminal_close_tab_message">O shell em execução nessa aba irá encerrar.</string>

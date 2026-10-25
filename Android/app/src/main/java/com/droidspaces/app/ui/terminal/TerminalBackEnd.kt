@@ -89,7 +89,7 @@ class TerminalBackEnd(
         if (!PreferencesManager.getInstance(activity).terminalTapKeyboard) return
         // A TUI with mouse tracking owns the tap. Raising the keyboard here would
         // also deliver the click underneath it, which is how a tap on a menu item
-        // becomes an accidental selection. The on-screen keyboard button stays
+        // becomes an accidental selection. The top bar keyboard button stays
         // available for these sessions, same as Termux.
         if (e.isFromSource(InputDevice.SOURCE_MOUSE)) return
         val emulator = terminal.mEmulator ?: return
@@ -147,10 +147,5 @@ class TerminalBackEnd(
         terminal.requestFocus()
         val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(terminal, InputMethodManager.SHOW_IMPLICIT)
-    }
-
-    internal fun hideSoftInput() {
-        val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(terminal.windowToken, 0)
     }
 }

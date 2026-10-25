@@ -440,8 +440,6 @@
     <string name="terminal_confirm_close_description">Chiedi conferma alla chiusura di una scheda del terminale</string>
     <string name="terminal_tap_keyboard">Apri Tastiera Al Tocco</string>
     <string name="terminal_tap_keyboard_description">Toccando il terminale si apre la tastiera. Disabilita questa funzione negli editor, in modo che un tocco sposti solo il cursore, e utilizza invece il pulsante a schermo</string>
-    <string name="terminal_keyboard_left">Pulsante Tastiera A Sinistra</string>
-    <string name="terminal_keyboard_left_description">Sposta il pulsante della tastiera nell\'angolo in basso a sinistra, per l\'uso con la mano sinistra</string>
     <string name="terminal_toggle_keyboard">Toggle tastiera</string>
     <string name="terminal_close_tab_title">Chiudere sessione?</string>
     <string name="terminal_close_tab_message">La shell in esecuzione in questa scheda terminerà.</string>

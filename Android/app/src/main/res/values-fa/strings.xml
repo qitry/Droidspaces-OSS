@@ -87,8 +87,6 @@
     <string name="terminal_confirm_close_description">هنگام بستن زبانه ترمینال، درخواست تأیید پرسیده شود</string>
     <string name="terminal_tap_keyboard">باز کردن صفحه‌کلید با ضربه</string>
     <string name="terminal_tap_keyboard_description">با ضربه زدن روی ترمینال، صفحه‌کلید باز می‌شود. این قابلیت را در ویرایشگرها غیرفعال کنید تا ضربه زدن فقط نشانگر را جابه‌جا کند و به‌جای آن از دکمه‌ی روی صفحه استفاده نمایید</string>
-    <string name="terminal_keyboard_left">دکمه صفحه‌کلید در سمت چپ</string>
-    <string name="terminal_keyboard_left_description">دکمه صفحه‌کلید را برای استفاده افراد چپ‌دست به گوشه پایین سمت چپ منتقل کنید</string>
     <string name="terminal_toggle_keyboard">تغییر وضعیت صفحه‌کلید</string>
     <string name="terminal_close_tab_title">زبانه بسته شود؟</string>
     <string name="terminal_close_tab_message">شل در حال اجرا در این زبانه متوقف خواهد شد.</string>

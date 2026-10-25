@@ -502,6 +502,12 @@ public final class VirtualKeysView extends GridLayout {
         addView(button);
       }
     }
+
+    // A matrix swap replaces every child while the old layer is still being
+    // drawn. Force a fresh measure so the new labels appear on the next frame,
+    // without waiting for another touch to invalidate the grid.
+    requestLayout();
+    invalidate();
   }
 
   @SuppressWarnings("deprecation")
@@ -531,11 +537,11 @@ public final class VirtualKeysView extends GridLayout {
   private void onAnyVirtualKeyButtonClick(
       View view, @NonNull VirtualKeyButton buttonInfo, Button button) {
     if ("MORE".equals(buttonInfo.getKey())) {
-      showSecondaryKeys();
+      post(this::showSecondaryKeys);
       return;
     }
     if ("BACK".equals(buttonInfo.getKey())) {
-      showPrimaryKeys();
+      post(this::showPrimaryKeys);
       return;
     }
     if (isSpecialButton(buttonInfo)) {

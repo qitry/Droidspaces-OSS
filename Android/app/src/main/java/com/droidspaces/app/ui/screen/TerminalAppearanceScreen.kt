@@ -26,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.automirrored.filled.KeyboardBackspace
 import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.FormatSize
@@ -92,7 +91,6 @@ fun TerminalAppearanceScreen(onBack: () -> Unit) {
     var fontSizePx by remember { mutableFloatStateOf(prefsManager.terminalFontSizePx.toFloat()) }
     var confirmClose by remember { mutableStateOf(prefsManager.terminalConfirmClose) }
     var tapKeyboard by remember { mutableStateOf(prefsManager.terminalTapKeyboard) }
-    var keyboardLeft by remember { mutableStateOf(prefsManager.terminalKeyboardLeft) }
 
     var selectedFont by remember { mutableStateOf(prefsManager.terminalFontFile) }
     var showFontDialog by remember { mutableStateOf(false) }
@@ -295,19 +293,6 @@ fun TerminalAppearanceScreen(onBack: () -> Unit) {
                         onCheckedChange = { checked ->
                             prefsManager.terminalTapKeyboard = checked
                             tapKeyboard = checked
-                        }
-                    )
-
-                    // The on-screen keyboard button is always available, including
-                    // while tap-to-open is on, so its side is a permanent choice.
-                    SwitchItem(
-                        icon = Icons.AutoMirrored.Filled.KeyboardBackspace,
-                        title = context.getString(R.string.terminal_keyboard_left),
-                        summary = context.getString(R.string.terminal_keyboard_left_description),
-                        checked = keyboardLeft,
-                        onCheckedChange = { checked ->
-                            prefsManager.terminalKeyboardLeft = checked
-                            keyboardLeft = checked
                         }
                     )
                 }

@@ -513,8 +513,6 @@
     <string name="easter_egg_reward">Anda memintanya 🎵</string>
     <string name="terminal_tap_keyboard">Buka Keyboard Saat Ketuk</string>
     <string name="terminal_tap_keyboard_description">Mengetuk terminal akan membuka keyboard. Nonaktifkan di editor agar ketukan hanya memindahkan kursor, lalu gunakan tombol pada layar sebagai gantinya</string>
-    <string name="terminal_keyboard_left">Tombol Keyboard di Kiri</string>
-    <string name="terminal_keyboard_left_description">Pindahkan tombol keyboard ke sudut kiri bawah untuk penggunaan tangan kiri</string>
     <string name="terminal_toggle_keyboard">Alihkan keyboard</string>
     <string name="disable_ipv6_description_isolated">Nonaktifkan IPv6 dalam kontainer ini.</string>
     <string name="cat_resource_limits">Batas Sumber Daya</string>

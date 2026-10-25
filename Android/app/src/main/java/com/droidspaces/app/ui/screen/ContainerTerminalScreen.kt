@@ -7,11 +7,11 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.os.IBinder
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -94,6 +94,13 @@ fun ContainerTerminalScreen(
     val hideKeyboard = {
         activity?.window?.let {
             WindowCompat.getInsetsController(it, it.decorView).hide(WindowInsetsCompat.Type.ime())
+        }
+    }
+    val showKeyboard = {
+        TerminalScreenState.terminalView.get()?.let { terminalView ->
+            terminalView.requestFocus()
+            val imm = context.getSystemService(InputMethodManager::class.java)
+            imm?.showSoftInput(terminalView, InputMethodManager.SHOW_IMPLICIT)
         }
     }
     var binder by remember { mutableStateOf<TerminalSessionService.SessionBinder?>(null) }
@@ -303,6 +310,17 @@ fun ContainerTerminalScreen(
                         }
                     },
                     actions = {
+                        val imeVisible = WindowInsets.isImeVisible
+                        IconButton(
+                            onClick = { if (imeVisible) hideKeyboard() else showKeyboard() },
+                            enabled = binder != null && tabs.isNotEmpty()
+                        ) {
+                            Icon(
+                                imageVector = if (imeVisible) Icons.Default.KeyboardHide
+                                              else Icons.Default.Keyboard,
+                                contentDescription = context.getString(R.string.terminal_toggle_keyboard)
+                            )
+                        }
                         IconButton(onClick = { pickUserOrOpenRoot() }) {
                             Icon(Icons.Default.Add, contentDescription = "New tab")
                         }
@@ -428,15 +446,9 @@ private fun TerminalTabView(
     // Terminal-only dark mode: renders the terminal page dark even when the rest
     // of the app follows the light theme. Read once at entry; re-enter to apply.
     val terminalDarkTheme = remember { prefsManager.terminalDarkTheme }
-    // The button is always available. Tapping a TUI sends a mouse click instead
-    // of raising the IME, so this is the way back to the keyboard.
-    val keyboardButtonLeft = remember { prefsManager.terminalKeyboardLeft }
     val extraKeysHeight =
         if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) 56.dp
         else 64.dp
-    // Holds this tab's client so the button acts on the terminal it sits on,
-    // rather than on whichever view TerminalScreenState last saw.
-    var backEnd by remember { mutableStateOf<TerminalBackEnd?>(null) }
     // Termux TerminalColors indices: 256 = default foreground, 257 = background,
     // 258 = cursor. Dark mode uses the classic termux white-on-black scheme:
     // pure white foreground on pure black background.
@@ -497,7 +509,6 @@ private fun TerminalTabView(
                                 session.updateTerminalSessionClient(client)
                                 attachSession(session)
                                 setTerminalViewClient(client)
-                                backEnd = client
                             }
 
                             post {
@@ -523,16 +534,6 @@ private fun TerminalTabView(
                         }
                     },
                     modifier = Modifier.fillMaxSize()
-                )
-
-                KeyboardToggleButton(
-                    darkTheme = terminalDarkTheme,
-                    onToggle = { imeVisible ->
-                        if (imeVisible) backEnd?.hideSoftInput() else backEnd?.showSoftInput()
-                    },
-                    modifier = Modifier
-                        .align(if (keyboardButtonLeft) Alignment.BottomStart else Alignment.BottomEnd)
-                        .padding(16.dp)
                 )
             }
 
@@ -565,48 +566,6 @@ private fun TerminalTabView(
                     .background(virtualKeysBackground)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
                     .height(extraKeysHeight)
-            )
-        }
-    }
-}
-
-/**
- * Always-visible keyboard control. A TUI tap has to stay a mouse click, so this
- * button is the way back to the IME in those sessions. It toggles, so the same
- * button also puts the keyboard away.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun KeyboardToggleButton(
-    darkTheme: Boolean,
-    onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    val imeVisible = WindowInsets.isImeVisible
-    // Literals for the same reason virtualKeysBackground above uses them, and the
-    // same decided exception in DESIGN.md: this sits on the terminal's own black,
-    // so it has to read dark even when the app itself is in the light theme.
-    val fill = if (darkTheme) Color(0xFF1A1A1E) else MaterialTheme.colorScheme.surfaceContainerHighest
-    val accent = if (darkTheme) Color.White else MaterialTheme.colorScheme.onSurface
-    val edge = if (darkTheme) Color.White.copy(alpha = 0.15f)
-               else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-
-    Surface(
-        onClick = { onToggle(imeVisible) },
-        modifier = modifier.size(56.dp),
-        shape = RoundedCornerShape(16.dp),
-        // Slightly transparent so it never fully hides a line of output under it
-        color = fill.copy(alpha = 0.9f),
-        border = BorderStroke(1.dp, edge),
-        tonalElevation = 0.dp
-    ) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = if (imeVisible) Icons.Default.KeyboardHide else Icons.Default.Keyboard,
-                contentDescription = context.getString(R.string.terminal_toggle_keyboard),
-                tint = accent,
-                modifier = Modifier.size(28.dp)
             )
         }
     }
