@@ -27,6 +27,17 @@ make format            # clang-format over src/
 
 Bare `make` only prints help. It does not build anything.
 
+`make native` needs the musl cross toolchain. If the build says it is missing, run
+`scripts/install-musl.sh <arch>`; the Makefile finds it in `~/toolchains/<target>-cross`.
+`make debug-hardened` is a host glibc ASan/UBSan build, not a static musl binary, so do not push
+it to a device.
+
+The version string comes from `DS_VERSION` in `src/include/droidspace.h`. The Makefile, the
+`.deb` names, and the Android `versionName`/`versionCode` all derive from it.
+
+The compiled backend is copied into `Android/app/src/main/assets/binaries` by `make all-build`
+or `make all-tarball`; that directory is gitignored.
+
 Android app, from `Android/`:
 
 ```
@@ -34,8 +45,15 @@ Android app, from `Android/`:
 ./build.sh release     # signed release
 ```
 
-Use the script, not gradle directly. CI runs `make all-tarball` then gradle, and does not
-check formatting, so `make format` is on you.
+Use the script, not gradle directly. `build.sh` runs `gradlew clean` first and leaves the APK
+under `app/build/outputs/apk/`. CI uses JDK 17 and compileSdk 36. `build.gradle.kts` generates
+the locale list and boot-module `module.prop` under `build/` from `res/values-*` and
+`src/main/boot-module/module.prop`; edit those inputs, not the generated copies.
+
+CI (`.github/workflows/ci.yml`) runs `make all-tarball`, `scripts/mkdeb.sh`, then a gradle
+release build. It does not run tests or check formatting, so `make format` is on you. There is
+no test suite; a Linux smoke test is `sudo ./output/droidspaces check`, and anything
+container-level needs a real device.
 
 Adding a new `.c` file means adding it to `SRCS` in the Makefile. There is no wildcard.
 
@@ -49,12 +67,13 @@ Run `adb devices` first, every time. If no line ends in `device`, stop and say s
 
 ### Running a test build without touching the daemon
 
-On the phone the CLI forwards every command to the running `droidspaces daemon`, and the
-daemon serves it with its own installed binary (`/data/local/Droidspaces/bin/droidspaces`).
-A freshly pushed build called by absolute path therefore still runs the installed code.
+On the phone most commands are forwarded to the running `droidspaces daemon`, and the daemon
+serves them with its own installed binary (`/data/local/Droidspaces/bin/droidspaces`). A freshly
+pushed build called by absolute path therefore still runs the installed code. `check`, `docs`,
+`help`, `version`, and `mode` are never proxied; they run in the binary you invoked.
 
-`DS_NO_PROXY=1` skips the forwarding, so the binary you invoked does the work itself. The
-daemon keeps running and nothing gets reinstalled.
+`DS_NO_PROXY=1` skips the forwarding for everything else, so the binary you invoked does the
+work itself. The daemon keeps running and nothing gets reinstalled.
 
 ```
 make aarch64                                   # match `adb shell uname -m`
@@ -69,8 +88,9 @@ EOF
 - To confirm your build is the one that started a container, look for its monitor process:
   `ls -l /proc/[0-9]*/exe 2>/dev/null | grep ds-test`. The PID that `show` prints is the
   container's init, whose `exe` is the guest's own, so it tells you nothing.
-- Container logs are at `/data/local/Droidspaces/Logs/<name>/log`, timestamps in UTC. The
-  daemon log is `Logs/droidspacesd.log`.
+- Per-container logs are in `/data/local/Droidspaces/Logs/<name>/`: `log` is the runtime log,
+  `console` is the init/console output, and timestamps use the host's local time. The daemon log
+  is `Logs/droidspacesd.log`.
 - Do not pass config flags such as `--upstream` in a test run without asking. They can be
   saved into the container's `container.config` and outlive the test.
 
@@ -134,6 +154,10 @@ count++;
 install_policy_rules(cfg);
 ```
 
+C and Kotlin conventions are in [CONTRIBUTING.md](./CONTRIBUTING.md). Two that bite first:
+`src/` uses `/* */` comments only, and a function stays `static` until it is declared in
+`src/include/droidspace.h`.
+
 **Ten lines that work beat a hundred that do the same thing.** Delete before you add. A
 smaller diff in the right place is the goal, not a smaller diff anywhere.
 
@@ -190,13 +214,16 @@ These are choke points. Bypassing one is a bug, not a shortcut.
 - `ds_peer_authorized()` in `src/utils.c` is the only authorization gate in the tree, and
   `ds_peer_in_pidns()` backs it. Both must fail closed. A "cannot determine, so allow"
   branch there was a root container escape once already.
-- `src/include/droidspace.h` is the catch-all header and every `.c` file includes only it.
-  Grep it before writing a helper.
+- `src/include/droidspace.h` is the catch-all header. Apart from the private headers under
+  `src/` (`anland/`, `virtualize.h`, `socketd_*`), every `.c` includes only it. Grep it before
+  writing a helper.
 - Logging is `ds_log`, `ds_warn`, `ds_error`, `ds_die`. Never a bare `fprintf` or `exit`.
 - `run_command`, `run_command_quiet`, `run_command_log` are the only sanctioned way to run
   an external binary. There is no `system()` in this tree and there must not be one.
 - Workspace paths come from `get_workspace_dir`, `get_pids_dir`, `get_net_dir`,
   `get_logs_dir`. They switch between the Android and Linux roots. Never hardcode either.
+- On the app side, paths and preference keys come from `Constants` in `util/Constants.kt`.
+  Never retype `/data/local/Droidspaces`.
 
 ## Hard constraints
 
@@ -205,5 +232,7 @@ These are choke points. Bypassing one is a bug, not a shortcut.
 - The app targets `minSdk = 26`. Test on Android 8 behaviour before assuming an API exists.
 - Autoboot scripts under `init/android-service/vendor/bin/` are strict POSIX sh. No bash
   arrays, no bashisms.
+- The Compose BOM and material3 pins in `Android/app/build.gradle.kts` are deliberate. Compose
+  1.12 and the newer material3 alphas need compileSdk 37 and AGP 9.
 - No new dependency when an installed one covers it. The app already has libsu, Compose,
-  navigation, lifecycle, and the Termux terminal.
+  navigation, lifecycle, reorderable, and the Termux terminal.
