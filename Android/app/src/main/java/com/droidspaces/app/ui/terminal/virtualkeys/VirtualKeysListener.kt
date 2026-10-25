@@ -1,5 +1,7 @@
 package com.droidspaces.app.ui.terminal.virtualkeys
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.view.KeyEvent
 import android.view.View
 import android.widget.Button
@@ -15,38 +17,43 @@ class VirtualKeysListener(val session: TerminalSession) : VirtualKeysView.IVirtu
     ) {
         val key = buttonInfo?.key ?: return
 
-        // Arrow/cursor keys require cursor-key-mode awareness.
-        // Programs like `less`, `vim`, and `systemctl status` enable DECCKM
-        // (\e[?1h, application cursor key mode) and expect \eOA/B/C/D,
-        // but we were hardcoding \e[A/B/C/D (normal mode), so they never
-        // scrolled. Routing through TerminalView.onKeyDown() lets the
-        // TerminalEmulator check its current DECCKM state and send the right
-        // escape sequence automatically, matching Termux's own behaviour.
-        val dpadCode: Int? = when (key) {
-            "UP"    -> KeyEvent.KEYCODE_DPAD_UP
-            "DOWN"  -> KeyEvent.KEYCODE_DPAD_DOWN
-            "LEFT"  -> KeyEvent.KEYCODE_DPAD_LEFT
-            "RIGHT" -> KeyEvent.KEYCODE_DPAD_RIGHT
-            else    -> null
+        if (key == "PASTE") {
+            pasteClipboard(view)
+            return
         }
-        if (dpadCode != null) {
-            TerminalScreenState.terminalView.get()?.let { tv ->
-                tv.onKeyDown(dpadCode, KeyEvent(KeyEvent.ACTION_DOWN, dpadCode))
-                return
+        // MORE and BACK are consumed by VirtualKeysView itself when a second
+        // matrix is installed. Do not leak their labels into the shell.
+        if (key == "MORE" || key == "BACK") return
+
+        // Route every mapped key through TerminalView.onKeyDown(), not just the
+        // arrows. That keeps DECCKM, modifier state and keypad mode in one place,
+        // and makes DEL, INS, F1-F12 and TAB send their terminal sequences instead
+        // of the literal key name.
+        VirtualKeysConstants.PRIMARY_KEY_CODES_FOR_STRINGS[key]?.let { keyCode ->
+            TerminalScreenState.terminalView.get()?.let { terminalView ->
+                terminalView.requestFocus()
+                terminalView.onKeyDown(keyCode, KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
             }
+            return
         }
 
-        val writeable: String = when (key) {
-            "ENTER" -> "\u000D"    // Carriage Return
-            "PGUP"  -> "\u001B[5~" // Page Up
-            "PGDN"  -> "\u001B[6~" // Page Down
-            "TAB"   -> "\u0009"    // Tab
-            "HOME"  -> "\u001B[H"  // Home
-            "END"   -> "\u001B[F"  // End
-            "ESC"   -> "\u001B"    // Escape
-            else    -> key
-        }
-        session.write(writeable)
+        // Literal keys, such as a custom symbol added to a future layout.
+        session.write(key)
+    }
+
+    private fun pasteClipboard(view: View?) {
+        val context = view?.context ?: return
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            ?: return
+        val text = clipboard.primaryClip
+            ?.takeIf { it.itemCount > 0 }
+            ?.getItemAt(0)
+            ?.coerceToText(context)
+            ?.toString()
+            ?.takeIf { it.isNotEmpty() }
+            ?: return
+        TerminalScreenState.terminalView.get()?.requestFocus()
+        session.emulator?.paste(text) ?: session.write(text)
     }
 
     override fun performVirtualKeyButtonHapticFeedback(

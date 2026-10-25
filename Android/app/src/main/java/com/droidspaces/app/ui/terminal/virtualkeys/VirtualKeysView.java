@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.AttributeSet;
+import android.util.TypedValue;
 import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -83,6 +84,8 @@ public final class VirtualKeysView extends GridLayout {
   public static final int MAX_LONG_PRESS_DURATION = 3000;
   /** Defines the fallback duration in milliseconds for {@link #mLongPressTimeout}. */
   public static final int FALLBACK_LONG_PRESS_DURATION = 400;
+  /** Vertical or horizontal travel needed before a key gesture becomes a swipe. */
+  public static final int SWIPE_THRESHOLD_DP = 24;
   /** Defines the minimum allowed duration in milliseconds for {@link #mLongPressRepeatDelay}. */
   public static final int MIN_LONG_PRESS__REPEAT_DELAY = 5;
   /** Defines the maximum allowed duration in milliseconds for {@link #mLongPressRepeatDelay}. */
@@ -151,6 +154,16 @@ public final class VirtualKeysView extends GridLayout {
    * and a swipe up action is done on an extra key.
    */
   private PopupWindow mPopupWindow;
+  /** The primary and alternate key matrices, both built with the same alias map. */
+  private VirtualKeysInfo mPrimaryKeysInfo;
+  private VirtualKeysInfo mSecondaryKeysInfo;
+  /** True while the alternate matrix is on screen. */
+  private boolean mShowingSecondary;
+  /** Gesture origin and threshold, so a swipe cannot fire from a tiny finger wobble. */
+  private float mGestureDownX;
+  private float mGestureDownY;
+  private boolean mSwipeHandled;
+  private int mSwipeThresholdPx;
 
   private ScheduledExecutorService mScheduledExecutor;
   private Handler mHandler;
@@ -169,6 +182,8 @@ public final class VirtualKeysView extends GridLayout {
         DEFAULT_BUTTON_ACTIVE_BACKGROUND_COLOR);
     setLongPressTimeout(ViewConfiguration.getLongPressTimeout());
     setLongPressRepeatDelay(DEFAULT_LONG_PRESS_REPEAT_DELAY);
+    mSwipeThresholdPx =
+        Math.round(SWIPE_THRESHOLD_DP * getResources().getDisplayMetrics().density);
   }
 
   /**
@@ -323,15 +338,46 @@ public final class VirtualKeysView extends GridLayout {
   }
 
   /**
-   * Reload this instance of {@link VirtualKeysView} with the info passed in {@code extraKeysInfo}.
+   * Reload this instance of {@link VirtualKeysView} with the primary key matrix.
    *
    * @param extraKeysInfo The {@link VirtualKeysInfo} that defines the necessary info for the extra
    *     keys.
    */
-  @SuppressLint("ClickableViewAccessibility")
   public void reload(VirtualKeysInfo extraKeysInfo) {
     if (extraKeysInfo == null) return;
+    mPrimaryKeysInfo = extraKeysInfo;
+    mShowingSecondary = false;
+    rebuild(extraKeysInfo);
+  }
 
+  /**
+   * Set the second matrix, reached from a {@code MORE} key and left again from a {@code BACK} key.
+   * Passing {@code null} disables the switch, so {@code MORE} then does nothing.
+   */
+  public void setAlternateKeysInfo(VirtualKeysInfo extraKeysInfo) {
+    mSecondaryKeysInfo = extraKeysInfo;
+    if (mShowingSecondary) {
+      if (extraKeysInfo != null) rebuild(extraKeysInfo);
+      else showPrimaryKeys();
+    }
+  }
+
+  private void showSecondaryKeys() {
+    if (mSecondaryKeysInfo == null || mShowingSecondary) return;
+    mShowingSecondary = true;
+    rebuild(mSecondaryKeysInfo);
+  }
+
+  private void showPrimaryKeys() {
+    if (mPrimaryKeysInfo == null || !mShowingSecondary) return;
+    mShowingSecondary = false;
+    rebuild(mPrimaryKeysInfo);
+  }
+
+  @SuppressLint("ClickableViewAccessibility")
+  private void rebuild(VirtualKeysInfo extraKeysInfo) {
+    if (mPopupWindow != null) dismissPopup();
+    mSwipeHandled = false;
     for (SpecialButtonState state : mSpecialButtons.values()) state.buttons = new ArrayList<>();
 
     removeAllViews();
@@ -355,8 +401,10 @@ public final class VirtualKeysView extends GridLayout {
 
         button.setText(buttonInfo.getDisplay());
         button.setTextColor(mButtonTextColor);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
         button.setAllCaps(mButtonTextAllCaps);
         button.setPadding(0, 0, 0, 0);
+        button.setSingleLine(true);
 
         button.setOnClickListener(
             view -> {
@@ -369,20 +417,36 @@ public final class VirtualKeysView extends GridLayout {
               switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                   view.setBackgroundColor(mButtonActiveBackgroundColor);
+                  mGestureDownX = event.getX();
+                  mGestureDownY = event.getY();
+                  mSwipeHandled = false;
                   // Start long press scheduled executors which will be stopped in
                   // next MotionEvent
                   startScheduledExecutors(view, buttonInfo, button);
                   return true;
 
                 case MotionEvent.ACTION_MOVE:
-                  if (buttonInfo.getPopup() != null) {
-                    // Show popup on swipe up
-                    if (mPopupWindow == null && event.getY() < 0) {
+                  float dx = event.getX() - mGestureDownX;
+                  float dy = event.getY() - mGestureDownY;
+                  if (!mSwipeHandled
+                      && "MORE".equals(buttonInfo.getKey())
+                      && dx <= -mSwipeThresholdPx
+                      && Math.abs(dx) > Math.abs(dy)) {
+                    // Mark the swipe now, switch on release. rebuilding the grid
+                    // during this gesture would remove the view still receiving it.
+                    mSwipeHandled = true;
+                    stopScheduledExecutors();
+                    view.setBackgroundColor(mButtonBackgroundColor);
+                    return true;
+                  }
+                  if (!mSwipeHandled && buttonInfo.getPopup() != null) {
+                    // Show popup after a deliberate upward swipe, not on every wobble.
+                    if (mPopupWindow == null && dy <= -mSwipeThresholdPx) {
                       stopScheduledExecutors();
                       view.setBackgroundColor(mButtonBackgroundColor);
                       showPopup(view, buttonInfo.getPopup());
                     }
-                    if (mPopupWindow != null && event.getY() > 0) {
+                    if (mPopupWindow != null && dy > mSwipeThresholdPx) {
                       view.setBackgroundColor(mButtonActiveBackgroundColor);
                       dismissPopup();
                     }
@@ -391,12 +455,21 @@ public final class VirtualKeysView extends GridLayout {
 
                 case MotionEvent.ACTION_CANCEL:
                   view.setBackgroundColor(mButtonBackgroundColor);
+                  mSwipeHandled = false;
                   stopScheduledExecutors();
+                  if (mPopupWindow != null) dismissPopup();
                   return true;
 
                 case MotionEvent.ACTION_UP:
                   view.setBackgroundColor(mButtonBackgroundColor);
                   stopScheduledExecutors();
+                  if (mSwipeHandled) {
+                    mSwipeHandled = false;
+                    if ("MORE".equals(buttonInfo.getKey())) {
+                      post(() -> showSecondaryKeys());
+                    }
+                    return true;
+                  }
                   // If ACTION_UP up was not from a repetitive key or was with a
                   // key with a popup
                   // button
@@ -457,6 +530,14 @@ public final class VirtualKeysView extends GridLayout {
 
   private void onAnyVirtualKeyButtonClick(
       View view, @NonNull VirtualKeyButton buttonInfo, Button button) {
+    if ("MORE".equals(buttonInfo.getKey())) {
+      showSecondaryKeys();
+      return;
+    }
+    if ("BACK".equals(buttonInfo.getKey())) {
+      showPrimaryKeys();
+      return;
+    }
     if (isSpecialButton(buttonInfo)) {
       if (mLongPressCount > 0) return;
       SpecialButtonState state = mSpecialButtons.get(SpecialButton.valueOf(buttonInfo.getKey()));
@@ -528,8 +609,10 @@ public final class VirtualKeysView extends GridLayout {
       button.setTextColor(mButtonTextColor);
     }
     button.setText(extraButton.getDisplay());
+    button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
     button.setAllCaps(mButtonTextAllCaps);
     button.setPadding(0, 0, 0, 0);
+    button.setSingleLine(true);
     button.setMinHeight(0);
     button.setMinWidth(0);
     button.setMinimumWidth(0);

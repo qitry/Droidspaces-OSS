@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.util.Log
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
@@ -86,6 +87,13 @@ class TerminalBackEnd(
         // Read live: the setting is changed on another screen while this object
         // is alive, so a constructor copy would go stale.
         if (!PreferencesManager.getInstance(activity).terminalTapKeyboard) return
+        // A TUI with mouse tracking owns the tap. Raising the keyboard here would
+        // also deliver the click underneath it, which is how a tap on a menu item
+        // becomes an accidental selection. The on-screen keyboard button stays
+        // available for these sessions, same as Termux.
+        if (e.isFromSource(InputDevice.SOURCE_MOUSE)) return
+        val emulator = terminal.mEmulator ?: return
+        if (emulator.isMouseTrackingActive()) return
         val keyboard = terminal.resources.configuration.keyboard
         if (keyboard == Configuration.KEYBOARD_NOKEYS ||
             keyboard == Configuration.KEYBOARD_12KEY) {

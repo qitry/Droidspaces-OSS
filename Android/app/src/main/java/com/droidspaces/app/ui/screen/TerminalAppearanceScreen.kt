@@ -1,6 +1,5 @@
 package com.droidspaces.app.ui.screen
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -299,19 +298,18 @@ fun TerminalAppearanceScreen(onBack: () -> Unit) {
                         }
                     )
 
-                    // Nothing to place while taps still open the keyboard
-                    AnimatedVisibility(visible = !tapKeyboard) {
-                        SwitchItem(
-                            icon = Icons.AutoMirrored.Filled.KeyboardBackspace,
-                            title = context.getString(R.string.terminal_keyboard_left),
-                            summary = context.getString(R.string.terminal_keyboard_left_description),
-                            checked = keyboardLeft,
-                            onCheckedChange = { checked ->
-                                prefsManager.terminalKeyboardLeft = checked
-                                keyboardLeft = checked
-                            }
-                        )
-                    }
+                    // The on-screen keyboard button is always available, including
+                    // while tap-to-open is on, so its side is a permanent choice.
+                    SwitchItem(
+                        icon = Icons.AutoMirrored.Filled.KeyboardBackspace,
+                        title = context.getString(R.string.terminal_keyboard_left),
+                        summary = context.getString(R.string.terminal_keyboard_left_description),
+                        checked = keyboardLeft,
+                        onCheckedChange = { checked ->
+                            prefsManager.terminalKeyboardLeft = checked
+                            keyboardLeft = checked
+                        }
+                    )
                 }
             }
 

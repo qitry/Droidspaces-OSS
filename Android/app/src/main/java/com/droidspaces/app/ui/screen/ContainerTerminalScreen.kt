@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.res.Configuration
 import android.os.IBinder
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -12,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +33,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -117,6 +121,10 @@ fun ContainerTerminalScreen(
     // Read inside snapshotFlow only, so the IME animation does not recompose the screen
     val ime = WindowInsets.ime
     val density = LocalDensity.current
+    // Compact the header on short and wide windows so the terminal gets the rows back.
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val topBarHeight = if (isLandscape) 52.dp else 56.dp
+    val tabHeight = if (isLandscape) 32.dp else 36.dp
 
     val tabs = remember { mutableStateListOf<TerminalTab>() }
     var activeTabId by remember { mutableStateOf("") }
@@ -299,6 +307,7 @@ fun ContainerTerminalScreen(
                             Icon(Icons.Default.Add, contentDescription = "New tab")
                         }
                     },
+                    expandedHeight = topBarHeight,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     )
@@ -311,14 +320,14 @@ fun ContainerTerminalScreen(
                         contentColor = MaterialTheme.colorScheme.primary,
                         edgePadding = 0.dp,
                         divider = {},
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().height(tabHeight)
                     ) {
                         tabs.forEach { tab ->
                             val isSelected = tab.id == activeTabId
                             Tab(
                                 selected = isSelected,
                                 onClick = { activeTabId = tab.id },
-                                modifier = Modifier.height(40.dp)
+                                modifier = Modifier.height(tabHeight)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -334,23 +343,24 @@ fun ContainerTerminalScreen(
                                         modifier = Modifier.widthIn(max = 120.dp)
                                     )
                                     Box(
-                                        Modifier.size(16.dp).clip(CircleShape),
+                                        Modifier
+                                            .size(tabHeight)
+                                            .clip(CircleShape)
+                                            .clickable(role = Role.Button) {
+                                                // Only the X asks for confirmation; a shell that
+                                                // already exited closes through onSessionFinished
+                                                if (confirmTabClose) tabPendingClose = tab
+                                                else closeTab(tab)
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        IconButton(
-                                            // Only the X asks for confirmation; a shell that already
-                                            // exited closes through onSessionFinished unasked
-                                            onClick = { if (confirmTabClose) tabPendingClose = tab else closeTab(tab) },
-                                            modifier = Modifier.size(16.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Close,
-                                                contentDescription = "Close tab",
-                                                modifier = Modifier.size(12.dp),
-                                                tint = if (isSelected) MaterialTheme.colorScheme.primary
-                                                       else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Close tab",
+                                            modifier = Modifier.size(14.dp),
+                                            tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
@@ -418,10 +428,12 @@ private fun TerminalTabView(
     // Terminal-only dark mode: renders the terminal page dark even when the rest
     // of the app follows the light theme. Read once at entry; re-enter to apply.
     val terminalDarkTheme = remember { prefsManager.terminalDarkTheme }
-    // When taps no longer raise the keyboard, the button on the terminal is the
-    // only way to get it back, so both are read together at entry.
-    val tapOpensKeyboard = remember { prefsManager.terminalTapKeyboard }
+    // The button is always available. Tapping a TUI sends a mouse click instead
+    // of raising the IME, so this is the way back to the keyboard.
     val keyboardButtonLeft = remember { prefsManager.terminalKeyboardLeft }
+    val extraKeysHeight =
+        if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) 56.dp
+        else 64.dp
     // Holds this tab's client so the button acts on the terminal it sits on,
     // rather than on whichever view TerminalScreenState last saw.
     var backEnd by remember { mutableStateOf<TerminalBackEnd?>(null) }
@@ -513,17 +525,15 @@ private fun TerminalTabView(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                if (!tapOpensKeyboard) {
-                    KeyboardToggleButton(
-                        darkTheme = terminalDarkTheme,
-                        onToggle = { imeVisible ->
-                            if (imeVisible) backEnd?.hideSoftInput() else backEnd?.showSoftInput()
-                        },
-                        modifier = Modifier
-                            .align(if (keyboardButtonLeft) Alignment.BottomStart else Alignment.BottomEnd)
-                            .padding(16.dp)
-                    )
-                }
+                KeyboardToggleButton(
+                    darkTheme = terminalDarkTheme,
+                    onToggle = { imeVisible ->
+                        if (imeVisible) backEnd?.hideSoftInput() else backEnd?.showSoftInput()
+                    },
+                    modifier = Modifier
+                        .align(if (keyboardButtonLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                        .padding(16.dp)
+                )
             }
 
             AndroidView(
@@ -533,7 +543,11 @@ private fun TerminalTabView(
                         binder.getSession(tab.id)?.let { virtualKeysViewClient = VirtualKeysListener(it) }
                         buttonTextColor = terminalForeground
                         try {
-                            reload(VirtualKeysInfo(VIRTUAL_KEYS_LAYOUT, "", VirtualKeysConstants.CONTROL_CHARS_ALIASES))
+                            val aliases = VirtualKeysConstants.CONTROL_CHARS_ALIASES
+                            reload(VirtualKeysInfo(VIRTUAL_KEYS_LAYOUT, "", aliases))
+                            setAlternateKeysInfo(
+                                VirtualKeysInfo(VIRTUAL_KEYS_LAYOUT_SECONDARY, "", aliases)
+                            )
                         } catch (e: Exception) {
                             e.printStackTrace()
                         }
@@ -550,15 +564,16 @@ private fun TerminalTabView(
                     .fillMaxWidth()
                     .background(virtualKeysBackground)
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
-                    .height(64.dp)
+                    .height(extraKeysHeight)
             )
         }
     }
 }
 
 /**
- * Manual keyboard control for when taps are handed to the terminal instead. It
- * toggles, so the same button also puts the keyboard away.
+ * Always-visible keyboard control. A TUI tap has to stay a mouse click, so this
+ * button is the way back to the IME in those sessions. It toggles, so the same
+ * button also puts the keyboard away.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -693,21 +708,28 @@ private val VIRTUAL_KEYS_LAYOUT = """
 [
   [
     "ESC",
-    {"key": "/", "popup": "\\"},
-    {"key": "-", "popup": "|"},
-    "HOME",
-    "UP",
-    "END",
-    "PGUP"
+    "SPACE",
+    "ALT",
+    "SHIFT",
+    {"key": "UP", "popup": "PGUP"},
+    "CTRL",
+    {"key": "DEL", "display": "DELETE"}
   ],
   [
     "TAB",
-    "CTRL",
-    "ALT",
-    "LEFT",
-    "DOWN",
-    "RIGHT",
-    "PGDN"
+    {"key": "PASTE", "display": "PASTE"},
+    {"key": "MORE", "display": "MORE"},
+    {"key": "LEFT", "popup": "HOME"},
+    {"key": "DOWN", "popup": "PGDN"},
+    {"key": "RIGHT", "popup": "END"},
+    "ENTER"
   ]
+]
+""".trimIndent()
+
+private val VIRTUAL_KEYS_LAYOUT_SECONDARY = """
+[
+  ["F1", "F2", "F3", "F4", "F5", "F6", "F7"],
+  ["F8", "F9", "F10", "F11", "F12", "INS", {"key": "BACK", "display": "BACK"}]
 ]
 """.trimIndent()
