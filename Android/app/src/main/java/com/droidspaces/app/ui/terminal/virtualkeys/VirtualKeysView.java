@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.PopupWindow;
 
@@ -68,7 +69,7 @@ import java.util.stream.Collectors;
  * {TerminalVirtualKeys} to handle Termux app specific logic and
  * leave the rest to the super class.
  */
-public final class VirtualKeysView extends GridLayout {
+public final class VirtualKeysView extends FrameLayout {
 
   /** Defines the default value for {@link #mButtonTextColor}. */
   public static final int DEFAULT_BUTTON_TEXT_COLOR = 0xFFFFFFFF;
@@ -157,6 +158,9 @@ public final class VirtualKeysView extends GridLayout {
   /** The primary and alternate key matrices, both built with the same alias map. */
   private VirtualKeysInfo mPrimaryKeysInfo;
   private VirtualKeysInfo mSecondaryKeysInfo;
+  /** The two prebuilt layers. Switching only toggles visibility, never rebuilds. */
+  private GridLayout mPrimaryGrid;
+  private GridLayout mSecondaryGrid;
   /** True while the alternate matrix is on screen. */
   private boolean mShowingSecondary;
   /** Gesture origin and threshold, so a swipe cannot fire from a tiny finger wobble. */
@@ -347,7 +351,9 @@ public final class VirtualKeysView extends GridLayout {
     if (extraKeysInfo == null) return;
     mPrimaryKeysInfo = extraKeysInfo;
     mShowingSecondary = false;
-    rebuild(extraKeysInfo);
+    replaceGrid(true, extraKeysInfo);
+    if (mSecondaryKeysInfo != null) replaceGrid(false, mSecondaryKeysInfo);
+    updateLayerVisibility();
   }
 
   /**
@@ -356,36 +362,71 @@ public final class VirtualKeysView extends GridLayout {
    */
   public void setAlternateKeysInfo(VirtualKeysInfo extraKeysInfo) {
     mSecondaryKeysInfo = extraKeysInfo;
-    if (mShowingSecondary) {
-      if (extraKeysInfo != null) rebuild(extraKeysInfo);
-      else showPrimaryKeys();
+    if (mPrimaryGrid == null) return;
+    if (extraKeysInfo == null) {
+      if (mSecondaryGrid != null) {
+        removeView(mSecondaryGrid);
+        mSecondaryGrid = null;
+      }
+    } else {
+      replaceGrid(false, extraKeysInfo);
     }
+    updateLayerVisibility();
   }
 
   private void showSecondaryKeys() {
-    if (mSecondaryKeysInfo == null || mShowingSecondary) return;
+    if (mSecondaryGrid == null || mShowingSecondary) return;
     mShowingSecondary = true;
-    rebuild(mSecondaryKeysInfo);
+    updateLayerVisibility();
   }
 
   private void showPrimaryKeys() {
-    if (mPrimaryKeysInfo == null || !mShowingSecondary) return;
+    if (mPrimaryGrid == null || !mShowingSecondary) return;
     mShowingSecondary = false;
-    rebuild(mPrimaryKeysInfo);
+    updateLayerVisibility();
+  }
+
+  private void updateLayerVisibility() {
+    if (mPrimaryGrid != null) {
+      mPrimaryGrid.setVisibility(mShowingSecondary ? GONE : VISIBLE);
+    }
+    if (mSecondaryGrid != null) {
+      mSecondaryGrid.setVisibility(mShowingSecondary ? VISIBLE : GONE);
+    }
+    requestLayout();
+    invalidate();
+  }
+
+  private void replaceGrid(boolean primary, VirtualKeysInfo info) {
+    GridLayout grid = buildGrid(info, primary);
+    if (grid == null) return;
+    grid.setLayoutParams(
+        new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+    if (primary) {
+      if (mPrimaryGrid != null) removeView(mPrimaryGrid);
+      mPrimaryGrid = grid;
+    } else {
+      if (mSecondaryGrid != null) removeView(mSecondaryGrid);
+      mSecondaryGrid = grid;
+    }
+    addView(grid);
   }
 
   @SuppressLint("ClickableViewAccessibility")
-  private void rebuild(VirtualKeysInfo extraKeysInfo) {
+  private GridLayout buildGrid(VirtualKeysInfo extraKeysInfo, boolean primary) {
     if (mPopupWindow != null) dismissPopup();
     mSwipeHandled = false;
-    for (SpecialButtonState state : mSpecialButtons.values()) state.buttons = new ArrayList<>();
+    if (primary) {
+      for (SpecialButtonState state : mSpecialButtons.values()) state.buttons = new ArrayList<>();
+    }
 
-    removeAllViews();
+    GridLayout grid = new GridLayout(getContext());
 
     VirtualKeyButton[][] buttons = extraKeysInfo.getMatrix();
 
-    setRowCount(buttons.length);
-    setColumnCount(maximumLength(buttons));
+    grid.setRowCount(buttons.length);
+    grid.setColumnCount(maximumLength(buttons));
 
     for (int row = 0; row < buttons.length; row++) {
       for (int col = 0; col < buttons[row].length; col++) {
@@ -394,7 +435,7 @@ public final class VirtualKeysView extends GridLayout {
         Button button;
         if (isSpecialButton(buttonInfo)) {
           button = createSpecialButton(buttonInfo.getKey(), true);
-          if (button == null) return;
+          if (button == null) return null;
         } else {
           button = new Button(getContext(), null, android.R.attr.buttonBarButtonStyle);
         }
@@ -432,8 +473,6 @@ public final class VirtualKeysView extends GridLayout {
                       && "MORE".equals(buttonInfo.getKey())
                       && dx <= -mSwipeThresholdPx
                       && Math.abs(dx) > Math.abs(dy)) {
-                    // Mark the swipe now, switch on release. rebuilding the grid
-                    // during this gesture would remove the view still receiving it.
                     mSwipeHandled = true;
                     stopScheduledExecutors();
                     view.setBackgroundColor(mButtonBackgroundColor);
@@ -466,7 +505,7 @@ public final class VirtualKeysView extends GridLayout {
                   if (mSwipeHandled) {
                     mSwipeHandled = false;
                     if ("MORE".equals(buttonInfo.getKey())) {
-                      post(() -> showSecondaryKeys());
+                      showSecondaryKeys();
                     }
                     return true;
                   }
@@ -491,7 +530,7 @@ public final class VirtualKeysView extends GridLayout {
               }
             });
 
-        LayoutParams param = new GridLayout.LayoutParams();
+        GridLayout.LayoutParams param = new GridLayout.LayoutParams();
         param.width = 0;
         param.height = 0;
         param.setMargins(0, 0, 0, 0);
@@ -499,15 +538,11 @@ public final class VirtualKeysView extends GridLayout {
         param.rowSpec = GridLayout.spec(row, GridLayout.FILL, 1.f);
         button.setLayoutParams(param);
 
-        addView(button);
+        grid.addView(button);
       }
     }
 
-    // A matrix swap replaces every child while the old layer is still being
-    // drawn. Force a fresh measure so the new labels appear on the next frame,
-    // without waiting for another touch to invalidate the grid.
-    requestLayout();
-    invalidate();
+    return grid;
   }
 
   @SuppressWarnings("deprecation")
@@ -537,11 +572,11 @@ public final class VirtualKeysView extends GridLayout {
   private void onAnyVirtualKeyButtonClick(
       View view, @NonNull VirtualKeyButton buttonInfo, Button button) {
     if ("MORE".equals(buttonInfo.getKey())) {
-      post(this::showSecondaryKeys);
+      showSecondaryKeys();
       return;
     }
     if ("BACK".equals(buttonInfo.getKey())) {
-      post(this::showPrimaryKeys);
+      showPrimaryKeys();
       return;
     }
     if (isSpecialButton(buttonInfo)) {
