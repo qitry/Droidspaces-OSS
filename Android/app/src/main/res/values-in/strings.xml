@@ -482,7 +482,7 @@
     <string name="terminal_section_theme">Tema</string>
     <string name="terminal_section_misc">Lain-lain</string>
     <string name="terminal_font_description">Berlaku untuk sesi terminal baru. Impor file .ttf atau .otf monospace apa pun.</string>
-    <string name="terminal_font_default">JetBrains Mono (Default)</string>
+    <string name="terminal_font_default">JetBrains Mono Nerd Font (Default)</string>
     <string name="terminal_font_import">Impor font kustom</string>
     <string name="terminal_font_import_error">Bukan file font yang valid: %1$s</string>
     <string name="terminal_font_delete">Hapus font</string>

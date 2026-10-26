@@ -271,7 +271,7 @@
     <string name="terminal_section_theme">Tema</string>
     <string name="terminal_section_misc">Miscelânea</string>
     <string name="terminal_font_description">Aplica a novas sessões do terminal. Importe qualquer aquivo .ttf monoespaçado ou .otf</string>
-    <string name="terminal_font_default">JetBrains Mono (Padrão)</string>
+    <string name="terminal_font_default">JetBrains Mono Nerd Font (Padrão)</string>
     <string name="terminal_font_import">Importe uma fonte customizada</string>
     <string name="terminal_font_import_error">Arquivo de fonte inválido: %1$s</string>
     <string name="terminal_font_delete">Remover fonte</string>

@@ -518,7 +518,7 @@
     <string name="terminal_section_theme">主题</string>
     <string name="terminal_section_misc">其他</string>
     <string name="terminal_font_description">将应用于新的终端会话。导入任意等宽 .ttf 或 .otf 字体文件。</string>
-    <string name="terminal_font_default">JetBrains Mono（默认）</string>
+    <string name="terminal_font_default">JetBrains Mono Nerd Font（默认）</string>
     <string name="terminal_font_import">导入自定义字体</string>
     <string name="terminal_font_import_error">无效的字体文件：%1$s</string>
     <string name="terminal_font_delete">删除字体</string>

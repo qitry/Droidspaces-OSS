@@ -499,7 +499,7 @@
     <string name="terminal_section_theme">佈景主題</string>
     <string name="terminal_section_misc">其他</string>
     <string name="terminal_font_description">適用於新的終端會話。可匯入任意等寬字體的 .ttf 或 .otf 檔案。</string>
-    <string name="terminal_font_default">JetBrains Mono (預設)</string>
+    <string name="terminal_font_default">JetBrains Mono Nerd Font (預設)</string>
     <string name="terminal_font_import">匯入自定義字型</string>
     <string name="terminal_font_import_error">不是一個有效的字型檔案: %1$s</string>
     <string name="terminal_font_delete">移除字型</string>

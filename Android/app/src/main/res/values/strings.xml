@@ -94,7 +94,7 @@
     <string name="terminal_section_theme">Theme</string>
     <string name="terminal_section_misc">Misc</string>
     <string name="terminal_font_description">Applies to new terminal sessions. Import any monospace .ttf or .otf file.</string>
-    <string name="terminal_font_default">JetBrains Mono (Default)</string>
+    <string name="terminal_font_default">JetBrains Mono Nerd Font (Default)</string>
     <string name="terminal_font_import">Import a custom font</string>
     <string name="terminal_font_import_error">Not a valid font file: %1$s</string>
     <string name="terminal_font_delete">Remove font</string>

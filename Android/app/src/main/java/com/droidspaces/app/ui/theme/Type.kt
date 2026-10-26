@@ -117,6 +117,8 @@ val Typography = Typography(
     )
 )
 
+// The bundled TTFs are JetBrains Mono Nerd Font Medium. They stay mapped to
+// Normal so every existing monospace call site gets the Medium face unchanged.
 val JetBrainsMono = FontFamily(
     Font(R.font.jetbrains_mono_regular, FontWeight.Normal),
     Font(R.font.jetbrains_mono_bold, FontWeight.Bold),

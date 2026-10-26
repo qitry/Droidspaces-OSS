@@ -432,7 +432,7 @@
     <string name="terminal_section_theme">Tema</string>
     <string name="terminal_section_misc">Varie</string>
     <string name="terminal_font_description">Si applica alle nuove sessioni di terminale. Importa qualsiasi file .ttf o .otf a spaziatura fissa (monospace).</string>
-    <string name="terminal_font_default">JetBrains Mono (Predefinito)</string>
+    <string name="terminal_font_default">JetBrains Mono Nerd Font (Predefinito)</string>
     <string name="terminal_font_import">Importa un font personalizzato</string>
     <string name="terminal_font_import_error">File font non valido: %1$s</string>
     <string name="terminal_font_delete">Rimuovi font</string>

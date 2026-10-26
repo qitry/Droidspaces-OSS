@@ -79,7 +79,7 @@
     <string name="terminal_section_theme">تم</string>
     <string name="terminal_section_misc">سایر</string>
     <string name="terminal_font_description">برای نشست‌های جدید ترمینال اعمال می‌شود. هر فایل با پسوند \".ttf\" یا \".otf\" و با فونت تک‌عرض را وارد کنید.</string>
-    <string name="terminal_font_default">JetBrains Mono (پیش‌فرض)</string>
+    <string name="terminal_font_default">JetBrains Mono Nerd Font (پیش‌فرض)</string>
     <string name="terminal_font_import">وارد کردن فونت سفارشی</string>
     <string name="terminal_font_import_error">فایل فونت معتبر نیست: %1$s</string>
     <string name="terminal_font_delete">حذف فونت</string>
