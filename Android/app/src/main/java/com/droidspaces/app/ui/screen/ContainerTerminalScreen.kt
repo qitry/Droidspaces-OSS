@@ -499,7 +499,7 @@ private fun TerminalTabView(
                             // The renderer paints cell backgrounds down to the last full
                             // row. Give the leftover strip the key row's colour so no
                             // blank band appears between the terminal and the keys.
-                            setBackgroundColor(virtualKeysBackground)
+                            setBackgroundColor(virtualKeysBackground.toArgb())
 
                             if (activity != null) {
                                 val client = TerminalBackEnd(
