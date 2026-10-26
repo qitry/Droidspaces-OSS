@@ -130,8 +130,7 @@ fun ContainerTerminalScreen(
     val density = LocalDensity.current
     // Compact the header on short and wide windows so the terminal gets the rows back.
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val topBarHeight = if (isLandscape) 52.dp else 56.dp
-    val tabHeight = if (isLandscape) 32.dp else 36.dp
+    val tabHeight = if (isLandscape) 26.dp else 28.dp
 
     val tabs = remember { mutableStateListOf<TerminalTab>() }
     var activeTabId by remember { mutableStateOf("") }
@@ -294,42 +293,58 @@ fun ContainerTerminalScreen(
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(
-                    title = {
+                val imeVisible = WindowInsets.isImeVisible
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 0.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(
+                                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                                )
+                            )
+                            .height(40.dp)
+                            .padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CompactHeaderButton(onClick = { exitScreen() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         Text(
                             containerName,
+                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { exitScreen() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        val imeVisible = WindowInsets.isImeVisible
-                        IconButton(
+                        CompactHeaderButton(
                             onClick = { if (imeVisible) hideKeyboard() else showKeyboard() },
                             enabled = binder != null && tabs.isNotEmpty()
                         ) {
                             Icon(
                                 imageVector = if (imeVisible) Icons.Default.KeyboardHide
                                               else Icons.Default.Keyboard,
-                                contentDescription = context.getString(R.string.terminal_toggle_keyboard)
+                                contentDescription = context.getString(R.string.terminal_toggle_keyboard),
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                        IconButton(onClick = { pickUserOrOpenRoot() }) {
-                            Icon(Icons.Default.Add, contentDescription = "New tab")
+                        CompactHeaderButton(onClick = { pickUserOrOpenRoot() }) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "New tab",
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
-                    },
-                    expandedHeight = topBarHeight,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                    )
-                )
+                    }
+                }
 
                 if (tabs.isNotEmpty()) {
                     SecondaryScrollableTabRow(
@@ -481,11 +496,10 @@ private fun TerminalTabView(
                             setTypeface(terminalTypeface) // JetBrains Mono; null = system default
                             keepScreenOn = true
                             isFocusableInTouchMode = true
-                            // The renderer only paints cell backgrounds; the full-screen
-                            // default background comes from the View itself.
-                            if (terminalDarkTheme) {
-                                setBackgroundColor(terminalBackground)
-                            }
+                            // The renderer paints cell backgrounds down to the last full
+                            // row. Give the leftover strip the key row's colour so no
+                            // blank band appears between the terminal and the keys.
+                            setBackgroundColor(virtualKeysBackground)
 
                             if (activity != null) {
                                 val client = TerminalBackEnd(
@@ -568,6 +582,23 @@ private fun TerminalTabView(
                     .height(extraKeysHeight)
             )
         }
+    }
+}
+
+@Composable
+private fun CompactHeaderButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
 
